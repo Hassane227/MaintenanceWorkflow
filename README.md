@@ -10,10 +10,10 @@
 - SQL Server
 
 ## API setup
-1. Update connection string in `/home/runner/work/MaintenanceWorkflow/MaintenanceWorkflow/MaintenanceWorkflow.Api/appsettings.json` (`ConnectionStrings:DefaultConnection`).
+1. Update connection string in `MaintenanceWorkflow.Api/appsettings.json` (`ConnectionStrings:DefaultConnection`).
 2. Run migrations:
    ```bash
-   cd /home/runner/work/MaintenanceWorkflow/MaintenanceWorkflow/MaintenanceWorkflow.Api
+   cd MaintenanceWorkflow.Api
    dotnet tool install --global dotnet-ef --version 8.0.11
    dotnet ef database update
    ```
@@ -26,7 +26,7 @@
 
 ## Frontend setup
 ```bash
-cd /home/runner/work/MaintenanceWorkflow/MaintenanceWorkflow/maintenanceworkflow-web
+cd maintenanceworkflow-web
 npm install
 npm run dev
 ```
