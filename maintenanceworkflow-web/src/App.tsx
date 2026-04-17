@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { apiRequest, ApiError } from './api'
@@ -126,18 +126,18 @@ function CompaniesPage() {
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const [companiesData, workflowsData] = await Promise.all([
       apiRequest<Company[]>('/api/admin/companies'),
       apiRequest<Workflow[]>('/api/admin/workflows'),
     ])
     setCompanies(companiesData)
     setWorkflows(workflowsData)
-  }
+  }, [])
 
   useEffect(() => {
-    load().catch((err: unknown) => setError(errorMessage(err)))
-  }, [])
+    void load().catch((err: unknown) => setError(errorMessage(err)))
+  }, [load])
 
   const onCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -221,13 +221,13 @@ function WorkflowsPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setWorkflows(await apiRequest<Workflow[]>('/api/admin/workflows'))
-  }
+  }, [])
 
   useEffect(() => {
-    load().catch((err: unknown) => setError(errorMessage(err)))
-  }, [])
+    void load().catch((err: unknown) => setError(errorMessage(err)))
+  }, [load])
 
   const onCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -286,13 +286,13 @@ function StatusesPage({ workflowId }: { workflowId: number }) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setStatuses(await apiRequest<WorkflowStatus[]>(`/api/admin/workflows/${workflowId}/statuses`))
-  }
+  }, [workflowId])
 
   useEffect(() => {
-    load().catch((err: unknown) => setError(errorMessage(err)))
-  }, [workflowId])
+    void load().catch((err: unknown) => setError(errorMessage(err)))
+  }, [load])
 
   const reset = () => {
     setForm({ name: '', order: 1, isInitial: false, isFinal: false, isActive: true })
@@ -396,7 +396,7 @@ function TransitionsPage({ workflowId }: { workflowId: number }) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const [statusData, transitionData] = await Promise.all([
       apiRequest<WorkflowStatus[]>(`/api/admin/workflows/${workflowId}/statuses`),
       apiRequest<WorkflowTransition[]>(`/api/admin/workflows/${workflowId}/transitions`),
@@ -404,15 +404,16 @@ function TransitionsPage({ workflowId }: { workflowId: number }) {
 
     setStatuses(statusData)
     setTransitions(transitionData)
-
-    if (statusData.length > 0 && form.fromStatusId === 0) {
-      setForm((prev) => ({ ...prev, fromStatusId: statusData[0].id, toStatusId: statusData[0].id }))
+    const fallbackStatusId = statusData[0]?.id
+    if (fallbackStatusId !== undefined) {
+      setForm((prev) =>
+        prev.fromStatusId === 0 ? { ...prev, fromStatusId: fallbackStatusId, toStatusId: fallbackStatusId } : prev)
     }
-  }
+  }, [workflowId])
 
   useEffect(() => {
-    load().catch((err: unknown) => setError(errorMessage(err)))
-  }, [workflowId])
+    void load().catch((err: unknown) => setError(errorMessage(err)))
+  }, [load])
 
   const reset = () => {
     const fallback = statuses[0]?.id ?? 0
@@ -525,7 +526,7 @@ function NcListPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const [title, setTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const [companiesData, ncsData] = await Promise.all([
       apiRequest<Company[]>('/api/admin/companies'),
       apiRequest<NonConformityListItem[]>('/api/nonconformities'),
@@ -535,14 +536,14 @@ function NcListPage({ onNavigate }: { onNavigate: (path: string) => void }) {
     setNcs(ncsData)
 
     const firstCompanyId = companiesData[0]?.id ?? 0
-    if (companyId === 0 && firstCompanyId > 0) {
-      setCompanyId(firstCompanyId)
+    if (firstCompanyId > 0) {
+      setCompanyId((prev) => (prev === 0 ? firstCompanyId : prev))
     }
-  }
+  }, [])
 
   useEffect(() => {
-    load().catch((err: unknown) => setError(errorMessage(err)))
-  }, [])
+    void load().catch((err: unknown) => setError(errorMessage(err)))
+  }, [load])
 
   const onCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -608,7 +609,7 @@ function NcDetailsPage({ ncId, role, onRoleChange }: { ncId: number; role: Runti
   const [actions, setActions] = useState<AvailableAction[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const loadNc = async (selectedRole: RuntimeRole) => {
+  const loadNc = useCallback(async (selectedRole: RuntimeRole) => {
     const [details, allowedActions] = await Promise.all([
       apiRequest<NonConformityDetails>(`/api/nonconformities/${ncId}`),
       apiRequest<AvailableAction[]>(`/api/nonconformities/${ncId}/actions?role=${selectedRole}`),
@@ -616,11 +617,11 @@ function NcDetailsPage({ ncId, role, onRoleChange }: { ncId: number; role: Runti
 
     setNc(details)
     setActions(allowedActions)
-  }
+  }, [ncId])
 
   useEffect(() => {
-    loadNc(role).catch((err: unknown) => setError(errorMessage(err)))
-  }, [ncId, role])
+    void loadNc(role).catch((err: unknown) => setError(errorMessage(err)))
+  }, [loadNc, role])
 
   const execute = async (transitionId: number) => {
     setError(null)
